@@ -51,11 +51,11 @@
 - [x] Add proper error handling / try-except in both endpoints
 - [x] Added logging to both API modules
 
-## Phase 5: Frontend Enhancements
-- [ ] Upload page — add processing status polling after upload
-- [ ] Chat page — improve source rendering (collapsible, better image display)
-- [ ] Document detail page — add "processing" spinner / auto-refresh while status is `processing`
-- [ ] General UX polish
+## Phase 5: Frontend Enhancements ✅
+- [x] Upload page — drag-and-drop + processing status polling (5s interval) + auto-redirect on completion
+- [x] Chat page — collapsible source panel, color-coded types (text/image/table), match % display, loading dots
+- [x] Document detail page — auto-refresh while processing, styled stats grid, status badges, spinner
+- [x] General UX polish — error states, empty states, helpful prompts
 
 ## Phase 6: Testing & Demo
 - [ ] Download "Attention Is All You Need" PDF

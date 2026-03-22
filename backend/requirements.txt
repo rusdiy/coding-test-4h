@@ -15,19 +15,17 @@ pgvector==0.2.4
 redis==5.0.1
 
 # Docling (PDF Processing)
-docling==1.0.0
-docling-core==1.0.0
+docling>=2.14.0
+docling-core>=2.14.0
 
-# AI/ML
-openai==1.10.0
-langchain==0.1.6
-langchain-openai==0.0.5
-sentence-transformers==2.3.1
+# AI/ML - Google Gemini
+google-generativeai>=0.8.0
 
 # Utilities
 python-dotenv==1.0.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
+numpy>=1.26.0
 
 # Image Processing
 Pillow==10.2.0

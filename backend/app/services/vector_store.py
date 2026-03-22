@@ -42,26 +42,21 @@ class VectorStore:
     
     async def generate_embedding(self, text: str) -> np.ndarray:
         """
-        Generate embedding for text.
+        Generate embedding for text using Gemini.
         
         TODO: Implement embedding generation
-        - Use OpenAI embeddings API or
-        - Use HuggingFace sentence-transformers
-        - Return numpy array of embeddings
+        - Use Google Gemini text-embedding-004
+        - Return numpy array of embeddings (768 dimensions)
         
-        Example with OpenAI:
-        from openai import OpenAI
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        response = client.embeddings.create(
-            model=settings.OPENAI_EMBEDDING_MODEL,
-            input=text
+        Example with Gemini:
+        import google.generativeai as genai
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        result = genai.embed_content(
+            model=settings.GEMINI_EMBEDDING_MODEL,
+            content=text,
+            task_type="retrieval_document"
         )
-        return np.array(response.data[0].embedding)
-        
-        Example with HuggingFace:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-        return model.encode(text)
+        return np.array(result['embedding'])
         """
         raise NotImplementedError("Embedding generation not implemented yet")
     

@@ -4,13 +4,14 @@
 
 ---
 
-## Phase 0: Setup & Configuration
-- [ ] Update `config.py` — add Gemini settings (`GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`)
-- [ ] Update `.env.example` — replace OpenAI vars with Gemini vars
-- [ ] Update `requirements.txt` — remove `openai`, `langchain`, `langchain-openai`; add `google-generativeai`
-- [ ] Update `document.py` model — change `Vector(1536)` → `Vector(768)` for Gemini embeddings
-- [ ] Update `config.py` — change `EMBEDDING_DIMENSION` default to `768`
-- [ ] Verify Docker Compose still works with updated deps
+## Phase 0: Setup & Configuration ✅
+- [x] Update `config.py` — add Gemini settings (`GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`)
+- [x] Update `.env.example` — replace OpenAI vars with Gemini vars
+- [x] Update `requirements.txt` — remove `openai`, `langchain`, `langchain-openai`; add `google-generativeai`
+- [x] Update `document.py` model — change `Vector(1536)` → `Vector(768)` for Gemini embeddings
+- [x] Update `config.py` — change `EMBEDDING_DIMENSION` default to `768`
+- [x] Update `docker-compose.yml` — Gemini env vars
+- [x] Update service skeletons — Gemini references in TODO comments
 
 ## Phase 1: Document Processing Pipeline (`document_processor.py`)
 - [ ] Implement `process_document()` — orchestrator method

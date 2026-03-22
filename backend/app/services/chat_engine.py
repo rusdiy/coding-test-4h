@@ -26,7 +26,7 @@ class ChatEngine:
     def __init__(self, db: Session):
         self.db = db
         self.vector_store = VectorStore(db)
-        self.llm = None  # TODO: Initialize LLM (OpenAI, Ollama, etc.)
+        self.llm = None  # TODO: Initialize LLM (Gemini)
     
     async def process_message(
         self,
@@ -79,26 +79,15 @@ class ChatEngine:
         """
         # TODO: Implement message processing
         # 
-        # Example LLM usage with OpenAI:
-        # from openai import OpenAI
-        # client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        # Example LLM usage with Gemini:
+        # import google.generativeai as genai
+        # genai.configure(api_key=settings.GEMINI_API_KEY)
+        # model = genai.GenerativeModel(settings.GEMINI_MODEL)
         # 
-        # response = client.chat.completions.create(
-        #     model=settings.OPENAI_MODEL,
-        #     messages=[
-        #         {"role": "system", "content": system_prompt},
-        #         {"role": "user", "content": user_prompt}
-        #     ]
-        # )
-        # 
-        # Example with LangChain:
-        # from langchain_openai import ChatOpenAI
-        # from langchain.prompts import ChatPromptTemplate
-        # 
-        # llm = ChatOpenAI(model=settings.OPENAI_MODEL)
-        # prompt = ChatPromptTemplate.from_messages([...])
-        # chain = prompt | llm
-        # response = chain.invoke({...})
+        # response = model.generate_content([
+        #     system_prompt,
+        #     user_prompt
+        # ])
         
         raise NotImplementedError("Message processing not implemented yet")
     

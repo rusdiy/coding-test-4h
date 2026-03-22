@@ -13,17 +13,18 @@
 - [x] Update `docker-compose.yml` — Gemini env vars
 - [x] Update service skeletons — Gemini references in TODO comments
 
-## Phase 1: Document Processing Pipeline (`document_processor.py`)
-- [ ] Implement `process_document()` — orchestrator method
+## Phase 1: Document Processing Pipeline (`document_processor.py`) ✅
+- [x] Implement `process_document()` — orchestrator method
   - Update status → parse with Docling → extract text/images/tables → generate embeddings → update status
-- [ ] Implement `_chunk_text()` — structure-aware chunking
-  - Use Docling's document structure (headings, paragraphs, sections)
-  - Fallback to recursive splitting with overlap for long sections
-  - Attach metadata: page number, section heading, chunk index, nearby image/table IDs
-- [ ] Implement `_save_text_chunks()` — persist chunks with embeddings
-- [ ] Implement `_save_image()` — save extracted image to disk + DB record
-- [ ] Implement `_save_table()` — render table as image + store structured JSON + DB record
-- [ ] Add error handling and status updates throughout
+- [x] Implement `_extract_and_chunk_text()` + `_create_chunks()` — structure-aware chunking
+  - Uses Docling's document structure (headings, paragraphs, sections)
+  - Fallback to paragraph-boundary splitting with overlap for long sections
+  - Attaches metadata: page number, section heading, chunk index, nearby image/table IDs
+- [x] Implement `_save_text_chunks()` — persist chunks with embeddings via VectorStore
+- [x] Implement `_extract_and_save_images()` — save extracted images to disk + DB record
+- [x] Implement `_extract_and_save_tables()` — render table as image + store structured JSON + DB record
+- [x] Add error handling and status updates throughout
+- [x] Implement caption injection ("semantic halo") for multimodal linking
 
 ## Phase 2: Vector Store (`vector_store.py`)
 - [ ] Initialize Gemini embedding model (`text-embedding-004`)

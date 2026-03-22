@@ -26,12 +26,12 @@
 - [x] Add error handling and status updates throughout
 - [x] Implement caption injection ("semantic halo") for multimodal linking
 
-## Phase 2: Vector Store (`vector_store.py`)
-- [ ] Initialize Gemini embedding model (`text-embedding-004`)
-- [ ] Implement `generate_embedding()` — call Gemini Embeddings API
-- [ ] Implement `store_chunk()` — generate embedding + create `DocumentChunk` record
-- [ ] Implement `similarity_search()` — pgvector cosine similarity with optional document filter
-- [ ] Implement `get_related_content()` — resolve image/table references from chunk metadata
+## Phase 2: Vector Store (`vector_store.py`) ✅
+- [x] Initialize Gemini embedding model (`text-embedding-004`) — lazy config on first call
+- [x] Implement `generate_embedding()` — call Gemini Embeddings API with task_type support
+- [x] Implement `store_chunk()` — generate embedding + create `DocumentChunk` record
+- [x] Implement `similarity_search()` — pgvector cosine similarity with optional document filter + inline media resolution
+- [x] Implement `get_related_content()` — resolve image/table references from chunk metadata
 
 ## Phase 3: Chat Engine (`chat_engine.py`)
 - [ ] Initialize Gemini LLM (`gemini-2.0-flash`)

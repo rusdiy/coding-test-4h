@@ -8,8 +8,10 @@ from typing import List, Optional
 from app.db.session import get_db
 from app.models.conversation import Conversation, Message
 from app.services.chat_engine import ChatEngine
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
@@ -66,20 +68,21 @@ async def send_message(
     db.add(user_message)
     db.commit()
     
-    # TODO: Process message with ChatEngine
-    # chat_engine = ChatEngine(db)
-    # result = await chat_engine.process_message(
-    #     conversation_id=conversation.id,
-    #     message=request.message,
-    #     document_id=request.document_id
-    # )
-    
-    # For now, return placeholder response
-    result = {
-        "answer": "This is a placeholder response. Implement ChatEngine to process messages.",
-        "sources": [],
-        "processing_time": 0.0
-    }
+    # Process message with ChatEngine
+    try:
+        chat_engine = ChatEngine(db)
+        result = await chat_engine.process_message(
+            conversation_id=conversation.id,
+            message=request.message,
+            document_id=request.document_id or conversation.document_id,
+        )
+    except Exception as e:
+        logger.error(f"ChatEngine error: {e}", exc_info=True)
+        result = {
+            "answer": f"Sorry, I encountered an error: {str(e)}",
+            "sources": [],
+            "processing_time": 0.0,
+        }
     
     # Save assistant message
     assistant_message = Message(

@@ -43,11 +43,13 @@
 - [x] Design system prompt (v1) with grounding instructions and source citation
 - [x] Prompt templates stored as versioned constants (SYSTEM_PROMPT_V1, CONTEXT_TEMPLATE, USER_TEMPLATE)
 
-## Phase 4: API Wiring
-- [ ] `documents.py` — wire `DocumentProcessor` in upload endpoint via BackgroundTasks
-- [ ] `chat.py` — uncomment and wire `ChatEngine.process_message()`
-- [ ] Add proper error handling / try-except in both endpoints
-- [ ] Test API endpoints manually via Swagger
+## Phase 4: API Wiring ✅
+- [x] `documents.py` — wire `DocumentProcessor` in upload endpoint via BackgroundTasks
+  - Created `_process_document_background()` helper with fresh DB session + asyncio.run()
+- [x] `chat.py` — wire `ChatEngine.process_message()` with error handling
+  - Falls back to friendly error message if ChatEngine fails
+- [x] Add proper error handling / try-except in both endpoints
+- [x] Added logging to both API modules
 
 ## Phase 5: Frontend Enhancements
 - [ ] Upload page — add processing status polling after upload

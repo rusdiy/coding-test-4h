@@ -4,50 +4,77 @@ Document management API endpoints
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.models.document import Document
 from app.services.document_processor import DocumentProcessor
 from app.core.config import settings
 import os
 import uuid
+import asyncio
+import logging
 from datetime import datetime
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _process_document_background(document_id: int, file_path: str):
+    """
+    Background task wrapper for document processing.
+
+    Creates a fresh DB session (the request session is closed after response)
+    and runs the async processor via asyncio.run().
+    """
+    db = SessionLocal()
+    try:
+        processor = DocumentProcessor(db)
+        result = asyncio.run(processor.process_document(file_path, document_id))
+        logger.info(f"Background processing result for doc {document_id}: {result}")
+    except Exception as e:
+        logger.error(f"Background processing failed for doc {document_id}: {e}")
+        # Update status to error
+        document = db.query(Document).filter(Document.id == document_id).first()
+        if document:
+            document.processing_status = "error"
+            document.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
 
 
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    background_tasks: BackgroundTasks = None,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db)
 ):
     """
     Upload a PDF document for processing
-    
+
     This endpoint:
     1. Saves the uploaded file
     2. Creates a document record
-    3. Triggers background processing (Docling extraction)
+    3. Triggers background processing (Docling extraction + embedding)
     """
     # Validate file type
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
-    
+
     # Validate file size
     contents = await file.read()
     if len(contents) > settings.MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail=f"File size exceeds {settings.MAX_FILE_SIZE / 1024 / 1024}MB limit")
-    
+
     # Generate unique filename
     file_id = str(uuid.uuid4())
     file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{file_id}{file_extension}"
     file_path = os.path.join(settings.UPLOAD_DIR, "documents", unique_filename)
-    
+
     # Save file
     with open(file_path, "wb") as f:
         f.write(contents)
-    
+
     # Create document record
     document = Document(
         filename=file.filename,
@@ -57,11 +84,12 @@ async def upload_document(
     db.add(document)
     db.commit()
     db.refresh(document)
-    
-    # TODO: Trigger background processing
-    # background_tasks.add_task(process_document_task, document.id, file_path, db)
-    # For now, you can process synchronously or implement Celery
-    
+
+    # Trigger background processing
+    background_tasks.add_task(
+        _process_document_background, document.id, file_path
+    )
+
     return {
         "id": document.id,
         "filename": document.filename,

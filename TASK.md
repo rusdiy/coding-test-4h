@@ -33,14 +33,15 @@
 - [x] Implement `similarity_search()` — pgvector cosine similarity with optional document filter + inline media resolution
 - [x] Implement `get_related_content()` — resolve image/table references from chunk metadata
 
-## Phase 3: Chat Engine (`chat_engine.py`)
-- [ ] Initialize Gemini LLM (`gemini-2.0-flash`)
-- [ ] Implement `_load_conversation_history()` — load last N messages for multi-turn
-- [ ] Implement `_search_context()` — delegate to VectorStore similarity search
-- [ ] Implement `_find_related_media()` — extract image/table refs from context chunks
-- [ ] Implement `_generate_response()` — build prompt with context + history + media refs → call Gemini
-- [ ] Implement `process_message()` — full RAG orchestration
-- [ ] Design system prompt with grounding instructions and source citation
+## Phase 3: Chat Engine (`chat_engine.py`) ✅
+- [x] Initialize Gemini LLM (`gemini-2.0-flash`) — lazy init via `_get_model()`
+- [x] Implement `_load_conversation_history()` — load last N messages for multi-turn
+- [x] Implement `_search_context()` — delegate to VectorStore similarity search
+- [x] Implement `_find_related_media()` — deduplicate image/table refs from context chunks
+- [x] Implement `_generate_response()` — build prompt with context + history + media refs → call Gemini
+- [x] Implement `process_message()` — full RAG orchestration
+- [x] Design system prompt (v1) with grounding instructions and source citation
+- [x] Prompt templates stored as versioned constants (SYSTEM_PROMPT_V1, CONTEXT_TEMPLATE, USER_TEMPLATE)
 
 ## Phase 4: API Wiring
 - [ ] `documents.py` — wire `DocumentProcessor` in upload endpoint via BackgroundTasks

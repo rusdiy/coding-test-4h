@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     
     # Gemini (Google AI)
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.0-flash"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-2-preview"
     
     # Upload Settings
     UPLOAD_DIR: str = "./uploads"

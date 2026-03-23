@@ -93,14 +93,7 @@ export default function ChatPage() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Auto-expand sources for the first response
-      if (data.sources && data.sources.length > 0) {
-        setExpandedSources((prev) => {
-          const next = new Set(prev);
-          next.add(messages.length + 1); // Index of the assistant message
-          return next;
-        });
-      }
+      // Auto-expand removed - sources remain closed by default
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages((prev) => [
@@ -225,7 +218,11 @@ export default function ChatPage() {
               </p>
             </div>
           ) : (
-            messages.map((msg, idx) => (
+            messages.map((msg, idx) => {
+              const textSources = msg.sources?.filter(s => s.type === "text") || [];
+              const mediaSources = msg.sources?.filter(s => s.type === "image" || s.type === "table") || [];
+              
+              return (
               <div
                 key={idx}
                 className={`flex ${
@@ -243,9 +240,33 @@ export default function ChatPage() {
                     {msg.content}
                   </p>
 
+                  {/* Render Media Sources Directly in Chat */}
+                  {mediaSources.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 gap-4">
+                      {mediaSources.map((source, sidx) => (
+                        <div key={sidx} className="border border-gray-200 rounded p-2 bg-white">
+                          <div className="flex justify-between items-center mb-2">
+                             <span className={`text-xs font-medium px-2 py-0.5 rounded ${source.type === 'image' ? 'text-purple-600 bg-purple-50' : 'text-green-600 bg-green-50'}`}>
+                               {source.type === 'image' ? '🖼️ Image' : '📊 Table'}
+                             </span>
+                             {source.page && <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded">Page {source.page}</span>}
+                          </div>
+                          <img
+                            src={`http://localhost:8000${source.url}`}
+                            alt={source.caption || `Document ${source.type}`}
+                            className="max-w-full rounded border bg-gray-50"
+                          />
+                          {source.caption && (
+                            <p className="text-xs text-gray-600 mt-2 italic border-l-2 border-gray-300 pl-2">{source.caption}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Sources Toggle */}
-                  {msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-3">
+                  {textSources.length > 0 && (
+                    <div className="mt-4 border-t border-gray-200 pt-3">
                       <button
                         onClick={() => toggleSources(idx)}
                         className={`text-xs font-medium flex items-center space-x-1 ${
@@ -255,14 +276,13 @@ export default function ChatPage() {
                         }`}
                       >
                         <span>
-                          {expandedSources.has(idx) ? "▼" : "▶"} Sources (
-                          {msg.sources.length})
+                          {expandedSources.has(idx) ? "▼ Hide Source Texts" : "▶ View Source Texts"} ({textSources.length})
                         </span>
                       </button>
 
                       {expandedSources.has(idx) && (
-                        <div className="mt-2 space-y-2">
-                          {msg.sources.map((source, sidx) =>
+                        <div className="mt-3 space-y-2">
+                          {textSources.map((source, sidx) =>
                             renderSource(source, sidx)
                           )}
                         </div>
@@ -271,7 +291,7 @@ export default function ChatPage() {
                   )}
                 </div>
               </div>
-            ))
+            )})
           )}
 
           {/* Loading Indicator */}

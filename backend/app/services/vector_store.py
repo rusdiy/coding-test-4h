@@ -25,13 +25,13 @@ class VectorStore:
     Vector store for document embeddings and similarity search.
 
     Uses:
-    - Google Gemini text-embedding-004 for embedding generation (768 dims)
+    - Google Gemini gemini-embedding-2-preview for embedding generation (768 dims)
     - PostgreSQL pgvector for storage and cosine similarity search
     """
 
     def __init__(self, db: Session):
         self.db = db
-        self._embedding_model_configured = False
+        self._client = None
         self._ensure_extension()
 
     def _ensure_extension(self):
@@ -43,23 +43,23 @@ class VectorStore:
             logger.debug(f"pgvector extension check: {e}")
             self.db.rollback()
 
-    def _configure_gemini(self):
-        """Lazily configure the Gemini API (only once)."""
-        if self._embedding_model_configured:
-            return
+    def _get_client(self):
+        """Lazily create the Google GenAI client (only once)."""
+        if self._client is not None:
+            return self._client
 
-        import google.generativeai as genai
+        from google import genai
 
         if not settings.GEMINI_API_KEY:
             raise ValueError(
                 "GEMINI_API_KEY is not set. Please add it to your .env file."
             )
 
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        self._embedding_model_configured = True
+        self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
         logger.info(
-            f"Gemini configured for embeddings: {settings.GEMINI_EMBEDDING_MODEL}"
+            f"Gemini client configured for embeddings: {settings.GEMINI_EMBEDDING_MODEL}"
         )
+        return self._client
 
     # =========================================================================
     # Embedding Generation
@@ -79,25 +79,40 @@ class VectorStore:
         Returns:
             numpy array of shape (768,)
         """
-        self._configure_gemini()
-        import google.generativeai as genai
+        client = self._get_client()
 
         # Truncate very long text to avoid API limits
         max_chars = 8000
         if len(content) > max_chars:
             content = content[:max_chars]
 
-        try:
-            result = genai.embed_content(
-                model=f"models/{settings.GEMINI_EMBEDDING_MODEL}",
-                content=content,
-                task_type=task_type,
-            )
-            return np.array(result["embedding"], dtype=np.float32)
-
-        except Exception as e:
-            logger.error(f"Embedding generation failed: {e}")
-            raise
+        import asyncio
+        
+        max_retries = 3
+        base_delay = 15
+        
+        for attempt in range(max_retries):
+            try:
+                result = await client.aio.models.embed_content(
+                    model=settings.GEMINI_EMBEDDING_MODEL,
+                    contents=content,
+                    config={
+                        "task_type": task_type,
+                        "output_dimensionality": settings.EMBEDDING_DIMENSION,
+                    },
+                )
+                return np.array(result.embeddings[0].values, dtype=np.float32)
+                
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str and attempt < max_retries - 1:
+                    wait_time = base_delay * (2 ** attempt)
+                    logger.warning(f"Rate limited by Gemini on embeddings (429). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                    continue
+                    
+                logger.error(f"Embedding generation failed: {e}")
+                raise
 
     # =========================================================================
     # Chunk Storage
@@ -182,7 +197,7 @@ class VectorStore:
                 page_number,
                 chunk_index,
                 metadata,
-                1 - (embedding <=> :query_embedding::vector) AS similarity
+                1 - (embedding <=> CAST(:query_embedding AS vector)) AS similarity
             FROM document_chunks
         """
         params: Dict[str, Any] = {"query_embedding": embedding_str, "k": k}
@@ -191,14 +206,34 @@ class VectorStore:
             sql += " WHERE document_id = :document_id"
             params["document_id"] = document_id
 
-        sql += " ORDER BY embedding <=> :query_embedding::vector LIMIT :k"
+        sql += " ORDER BY embedding <=> CAST(:query_embedding AS vector) LIMIT :k"
 
         try:
             result = self.db.execute(text(sql), params)
             rows = result.fetchall()
         except Exception as e:
             logger.error(f"Similarity search failed: {e}")
+            self.db.rollback()
+            
+            # Diagnostic: check if chunks exist at all
+            try:
+                diag_sql = "SELECT COUNT(*) as cnt FROM document_chunks"
+                diag_params: Dict[str, Any] = {}
+                if document_id is not None:
+                    diag_sql += " WHERE document_id = :document_id"
+                    diag_params["document_id"] = document_id
+                diag_result = self.db.execute(text(diag_sql), diag_params)
+                count = diag_result.scalar()
+                logger.error(f"Diagnostic: document_chunks count = {count} (doc_id={document_id})")
+            except Exception as diag_e:
+                logger.error(f"Diagnostic query also failed: {diag_e}")
+                self.db.rollback()
+            
             return []
+
+        logger.info(
+            f"Similarity search raw results: {len(rows)} rows returned"
+        )
 
         # Build results with resolved related content
         results = []

@@ -6,11 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api import documents, chat
 from app.core.config import settings
-from app.db.session import engine
+from app.db.session import engine, init_db
 from app.models import document, conversation
 import os
 
-# Create database tables
+# Initialize database and create tables
+init_db()
 document.Base.metadata.create_all(bind=engine)
 conversation.Base.metadata.create_all(bind=engine)
 

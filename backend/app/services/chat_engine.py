@@ -67,24 +67,20 @@ class ChatEngine:
     def __init__(self, db: Session):
         self.db = db
         self.vector_store = VectorStore(db)
-        self._model = None
+        self._client = None
 
-    def _get_model(self):
-        """Lazily initialize the Gemini generative model."""
-        if self._model is None:
-            import google.generativeai as genai
+    def _get_client(self):
+        """Lazily initialize the Google GenAI client."""
+        if self._client is None:
+            from google import genai
 
             if not settings.GEMINI_API_KEY:
                 raise ValueError(
                     "GEMINI_API_KEY is not set. Please add it to your .env file."
                 )
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            self._model = genai.GenerativeModel(
-                model_name=settings.GEMINI_MODEL,
-                system_instruction=SYSTEM_PROMPT_V1,
-            )
-            logger.info(f"Gemini model initialized: {settings.GEMINI_MODEL}")
-        return self._model
+            self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            logger.info(f"Gemini client initialized: {settings.GEMINI_MODEL}")
+        return self._client
 
     # =========================================================================
     # Main Entry Point
@@ -212,25 +208,100 @@ class ChatEngine:
         """
         Collect unique related images and tables from retrieved context chunks.
 
-        The vector_store.similarity_search() already resolves media inline,
-        so we deduplicate and merge here.
+        Strategy:
+        1. First, use explicitly linked media from chunk metadata (related_images, related_tables)
+        2. Fallback: query DB for images/tables on the same pages as retrieved chunks
+           (handles cases where Docling cross-references weren't resolved during processing)
         """
         seen_image_ids: set = set()
         seen_table_ids: set = set()
+        seen_media_keys: set = set()  # Used for semantic deduplication (page + caption)
         images: List[Dict[str, Any]] = []
         tables: List[Dict[str, Any]] = []
 
+        # Strategy 1: Explicitly linked media from chunk metadata
         for chunk in context_chunks:
             for img in chunk.get("related_images", []):
-                if img["id"] not in seen_image_ids:
+                media_key = f"img_{img.get('page')}_{img.get('caption')}"
+                if img["id"] not in seen_image_ids and media_key not in seen_media_keys:
                     seen_image_ids.add(img["id"])
+                    seen_media_keys.add(media_key)
                     images.append(img)
 
             for tbl in chunk.get("related_tables", []):
-                if tbl["id"] not in seen_table_ids:
+                media_key = f"tbl_{tbl.get('page')}_{tbl.get('caption')}"
+                if tbl["id"] not in seen_table_ids and media_key not in seen_media_keys:
                     seen_table_ids.add(tbl["id"])
+                    seen_media_keys.add(media_key)
                     tables.append(tbl)
 
+        # Strategy 2: Page-based fallback — query DB for media on the same pages
+        if not images or not tables:
+            page_numbers = set()
+            document_id = None
+            
+            # Only use the top 2 most relevant chunks to avoid pulling in too many irrelevant images
+            for chunk in context_chunks[:2]:
+                if chunk.get("page_number"):
+                    page_numbers.add(chunk["page_number"])
+                if chunk.get("metadata", {}).get("document_id"):
+                    document_id = chunk["metadata"]["document_id"]
+
+            page_numbers.discard(0)  # Remove page 0 if present
+
+            if page_numbers:
+                # Fallback: find images on relevant pages
+                if not images:
+                    try:
+                        query = self.db.query(DocumentImage).filter(
+                            DocumentImage.page_number.in_(page_numbers)
+                        )
+                        if document_id:
+                            query = query.filter(DocumentImage.document_id == document_id)
+                        db_images = query.all()
+                        for img in db_images:
+                            media_key = f"img_{img.page_number}_{img.caption}"
+                            if img.id not in seen_image_ids and media_key not in seen_media_keys:
+                                seen_image_ids.add(img.id)
+                                seen_media_keys.add(media_key)
+                                images.append({
+                                    "id": img.id,
+                                    "url": f"/uploads/images/{os.path.basename(img.file_path)}",
+                                    "caption": img.caption,
+                                    "page": img.page_number,
+                                })
+                        if db_images:
+                            logger.info(f"Page-based fallback found {len(db_images)} images on pages {page_numbers}")
+                    except Exception as e:
+                        logger.error(f"Failed to query images by page: {e}")
+
+                # Fallback: find tables on relevant pages
+                if not tables:
+                    try:
+                        query = self.db.query(DocumentTable).filter(
+                            DocumentTable.page_number.in_(page_numbers)
+                        )
+                        if document_id:
+                            query = query.filter(DocumentTable.document_id == document_id)
+                        db_tables = query.all()
+                        for tbl in db_tables:
+                            media_key = f"tbl_{tbl.page_number}_{tbl.caption}"
+                            if tbl.id not in seen_table_ids and media_key not in seen_media_keys:
+                                seen_table_ids.add(tbl.id)
+                                seen_media_keys.add(media_key)
+                                tables.append({
+                                    "id": tbl.id,
+                                    "url": f"/uploads/tables/{os.path.basename(tbl.image_path)}",
+                                    "caption": tbl.caption,
+                                    "page": tbl.page_number,
+                                    "data": tbl.data,
+                                })
+                        if db_tables:
+                            logger.info(f"Page-based fallback found {len(db_tables)} tables on pages {page_numbers}")
+                    except Exception as e:
+                        logger.error(f"Failed to query tables by page: {e}")
+
+        logger.info(f"Related media resolved: {len(images)} images, {len(tables)} tables")
         return {"images": images, "tables": tables}
 
     # =========================================================================
@@ -248,13 +319,15 @@ class ChatEngine:
         Build a grounded prompt and generate a response via Gemini.
 
         Prompt structure:
-        1. System prompt (set via model system_instruction)
+        1. System prompt (passed via system_instruction config)
         2. Context block (retrieved chunks with page numbers)
         3. Media block (descriptions of available images/tables)
         4. Conversation history
         5. Current user question
         """
-        model = self._get_model()
+        from google.genai import types
+
+        client = self._get_client()
 
         # Build context block
         context_blocks = []
@@ -288,45 +361,59 @@ class ChatEngine:
             media_block=media_block,
         )
 
-        # Build chat history for Gemini
-        # Gemini uses a list of Content objects with roles "user" and "model"
+        # Build chat contents for Gemini
         chat_contents = []
 
         # Add context as the first user message
-        chat_contents.append({
-            "role": "user",
-            "parts": [context_prompt],
-        })
-        chat_contents.append({
-            "role": "model",
-            "parts": ["I've reviewed the document context and available media. I'm ready to answer your questions based on this information."],
-        })
+        chat_contents.append(
+            types.Content(role="user", parts=[types.Part.from_text(text=context_prompt)])
+        )
+        chat_contents.append(
+            types.Content(role="model", parts=[types.Part.from_text(text="I've reviewed the document context and available media. I'm ready to answer your questions based on this information.")])
+        )
 
         # Add conversation history
         for msg in history:
             role = "model" if msg["role"] == "assistant" else "user"
-            chat_contents.append({
-                "role": role,
-                "parts": [msg["content"]],
-            })
+            chat_contents.append(
+                types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])])
+            )
 
         # Add current question
         user_prompt = USER_TEMPLATE.format(question=message)
-        chat_contents.append({
-            "role": "user",
-            "parts": [user_prompt],
-        })
+        chat_contents.append(
+            types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)])
+        )
 
-        # Call Gemini
-        try:
-            response = model.generate_content(chat_contents)
-            answer = response.text
-            logger.info(f"LLM response generated ({len(answer)} chars)")
-            return answer
-
-        except Exception as e:
-            logger.error(f"Gemini generation failed: {e}", exc_info=True)
-            raise RuntimeError(f"Failed to generate response: {e}")
+        import asyncio
+        
+        # Call Gemini with retry logic for rate limits
+        max_retries = 3
+        base_delay = 15
+        
+        for attempt in range(max_retries):
+            try:
+                response = await client.aio.models.generate_content(
+                    model=settings.GEMINI_MODEL,
+                    contents=chat_contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT_V1,
+                    ),
+                )
+                answer = response.text
+                logger.info(f"LLM response generated ({len(answer)} chars)")
+                return answer
+            
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str and attempt < max_retries - 1:
+                    wait_time = base_delay * (2 ** attempt)
+                    logger.warning(f"Rate limited by Gemini (429). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                    continue
+                    
+                logger.error(f"Gemini generation failed: {e}", exc_info=True)
+                raise RuntimeError(f"Failed to generate response: {e}")
 
     # =========================================================================
     # Source Formatting

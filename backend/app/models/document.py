@@ -34,10 +34,10 @@ class DocumentChunk(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
-    embedding = Column(Vector(768))  # Gemini text-embedding-004 dimension
+    embedding = Column(Vector(768))  # Gemini gemini-embedding-2-preview dimension
     page_number = Column(Integer)
     chunk_index = Column(Integer)
-    metadata = Column(JSON)  # {related_images: [...], related_tables: [...], ...}
+    doc_metadata = Column("metadata", JSON)  # {related_images: [...], related_tables: [...], ...}
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -54,7 +54,7 @@ class DocumentImage(Base):
     caption = Column(Text, nullable=True)
     width = Column(Integer)
     height = Column(Integer)
-    metadata = Column(JSON)  # Additional metadata from Docling
+    doc_metadata = Column("metadata", JSON)  # Additional metadata from Docling
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -72,7 +72,7 @@ class DocumentTable(Base):
     caption = Column(Text, nullable=True)
     rows = Column(Integer)
     columns = Column(Integer)
-    metadata = Column(JSON)
+    doc_metadata = Column("metadata", JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

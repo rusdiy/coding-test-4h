@@ -52,6 +52,12 @@ class DocumentProcessor:
         start_time = time.time()
 
         try:
+            # Verify document still exists (guard against zombie tasks)
+            document = self.db.query(Document).filter(Document.id == document_id).first()
+            if not document:
+                logger.warning(f"Document {document_id} no longer exists in DB. Aborting processing.")
+                return {"status": "aborted", "error": "Document was deleted", "processing_time": 0}
+
             await self._update_document_status(document_id, "processing")
 
             # Import Docling lazily to avoid slow startup
@@ -317,6 +323,12 @@ class DocumentProcessor:
                     f"Failed to store chunk {chunk['chunk_index']} "
                     f"for document {document_id}: {e}"
                 )
+                self.db.rollback()
+                
+                # If document was deleted, abort entirely
+                if "ForeignKeyViolation" in str(e) or "is not present in table" in str(e):
+                    logger.warning(f"Document {document_id} was deleted. Aborting chunk storage.")
+                    break
 
     # =========================================================================
     # Image Extraction
@@ -363,6 +375,7 @@ class DocumentProcessor:
 
             except Exception as e:
                 logger.error(f"Failed to extract image: {e}")
+                self.db.rollback()
 
         return saved
 
@@ -437,6 +450,7 @@ class DocumentProcessor:
 
             except Exception as e:
                 logger.error(f"Failed to extract table: {e}")
+                self.db.rollback()
 
         return saved
 
@@ -452,8 +466,17 @@ class DocumentProcessor:
 
     def _extract_caption(self, item) -> Optional[str]:
         """Extract caption text from a Docling item (multiple strategies)."""
-        if hasattr(item, 'caption_text') and item.caption_text:
-            return item.caption_text
+        # caption_text is a METHOD on FloatingItem — must be called, not referenced
+        if hasattr(item, 'caption_text'):
+            if callable(item.caption_text):
+                try:
+                    text = item.caption_text(doc=None)
+                    if text:
+                        return text
+                except Exception:
+                    pass
+            elif item.caption_text:
+                return item.caption_text
         if hasattr(item, 'captions') and item.captions:
             texts = []
             for cap in item.captions:

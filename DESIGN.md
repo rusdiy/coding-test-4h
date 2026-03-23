@@ -25,7 +25,7 @@
 ```
 PDF Upload → Docling Parse → [Text Chunks + Images + Tables]
                                      ↓
-                              Gemini Embeddings (text-embedding-004)
+                              Gemini Embeddings (gemini-embedding-2-preview)
                                      ↓
                               pgvector Storage
                                      ↓
@@ -35,7 +35,7 @@ User Query → Embed Query → Cosine Similarity Search → Top-K Chunks
                                      ↓
                     Build Multimodal Prompt (context + history + media)
                                      ↓
-                         Gemini 2.0 Flash → Response
+                         Gemini 2.5 Flash → Response
                                      ↓
                     Format Answer + Sources → Frontend
 ```
@@ -143,7 +143,7 @@ This creates a "semantic halo" around each image/table — the caption text beco
 
 Multimodal embedding models (e.g., CLIP) could embed images alongside text. However:
 - Adds complexity and a separate embedding model
-- Gemini's text-embedding-004 doesn't support images
+- While Gemini's `gemini-embedding-2-preview` does support multimodal content, caption-based linking provides explicit structural guarantees.
 - Caption-based linking achieves ~80% of the benefit with minimal complexity
 - Within the scope of this test, caption + proximity linking is the pragmatic choice
 
@@ -287,8 +287,8 @@ Request → Load Prompt Version (based on experiment config)
 
 | Choice | Value | Rationale |
 |--------|-------|-----------|
-| Chat Model | `gemini-2.0-flash` | Fast, capable, free tier generous (15 RPM / 1M TPM) |
-| Embedding Model | `text-embedding-004` | 768 dimensions, solid retrieval quality, free |
+| Chat Model | `gemini-2.5-flash` | Fast, capable, free tier generous (15 RPM / 1M TPM) |
+| Embedding Model | `gemini-embedding-2-preview` | 768 dimensions (or 8192 limits), solid retrieval quality, free |
 | Alternative Considered | OpenAI `gpt-4o-mini` + `text-embedding-3-small` | Better quality but requires paid API key |
 
 ### PDF Processing: Docling
@@ -303,6 +303,6 @@ Request → Load Prompt Version (based on experiment config)
 
 ### Embedding Dimension: 768
 
-- Gemini `text-embedding-004` default output dimension.
+- Gemini `gemini-embedding-2-preview` default output dimension handling.
 - Changed from the skeleton's `1536` (which was OpenAI-specific).
 - 768 dimensions is a good balance between retrieval quality and storage/compute cost.

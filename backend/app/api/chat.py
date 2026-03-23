@@ -78,8 +78,9 @@ async def send_message(
         )
     except Exception as e:
         logger.error(f"ChatEngine error: {e}", exc_info=True)
+        db.rollback()
         result = {
-            "answer": f"Sorry, I encountered an error: {str(e)}",
+            "answer": f"I encountered an error while processing your question: {str(e)}",
             "sources": [],
             "processing_time": 0.0,
         }

@@ -27,14 +27,14 @@
 - [x] Implement caption injection ("semantic halo") for multimodal linking
 
 ## Phase 2: Vector Store (`vector_store.py`) ✅
-- [x] Initialize Gemini embedding model (`text-embedding-004`) — lazy config on first call
+- [x] Initialize Gemini embedding model (`gemini-embedding-2-preview`) — lazy config on first call
 - [x] Implement `generate_embedding()` — call Gemini Embeddings API with task_type support
 - [x] Implement `store_chunk()` — generate embedding + create `DocumentChunk` record
 - [x] Implement `similarity_search()` — pgvector cosine similarity with optional document filter + inline media resolution
 - [x] Implement `get_related_content()` — resolve image/table references from chunk metadata
 
 ## Phase 3: Chat Engine (`chat_engine.py`) ✅
-- [x] Initialize Gemini LLM (`gemini-2.0-flash`) — lazy init via `_get_model()`
+- [x] Initialize Gemini LLM (`gemini-2.5-flash`) — lazy init via `_get_model()`
 - [x] Implement `_load_conversation_history()` — load last N messages for multi-turn
 - [x] Implement `_search_context()` — delegate to VectorStore similarity search
 - [x] Implement `_find_related_media()` — deduplicate image/table refs from context chunks
@@ -58,12 +58,12 @@
 - [x] General UX polish — error states, empty states, helpful prompts
 
 ## Phase 6: Testing & Demo
-- [ ] Download "Attention Is All You Need" PDF
-- [ ] Upload and verify processing completes without errors
-- [ ] Test: "Show me the Transformer architecture diagram" → should retrieve Figure 1
-- [ ] Test: "What are the BLEU scores?" → should retrieve Table data
-- [ ] Test: "Explain self-attention" → should retrieve relevant text sections
-- [ ] Capture screenshots for submission
+- [x] Download "Attention Is All You Need" PDF
+- [x] Upload and verify processing completes without errors
+- [x] Test: "Show me the Transformer architecture diagram" → should retrieve Figure 1
+- [x] Test: "What are the BLEU scores?" → should retrieve Table data
+- [x] Test: "Explain self-attention" → should retrieve relevant text sections
+- [x] Capture screenshots for submission
 
 ## Phase 7: Documentation (DESIGN.md)
 - [ ] Finalize Design Choice Document (chunking + multimodal linking)
@@ -77,7 +77,7 @@
 
 | # | Decision | Rationale | Date |
 |---|----------|-----------|------|
-| 1 | Use Gemini (free tier) instead of OpenAI | Cost-free; `gemini-2.0-flash` for chat, `text-embedding-004` for embeddings | 2026-03-22 |
+| 1 | Use Gemini (free tier) instead of OpenAI | Cost-free; `gemini-2.5-flash` for chat, `gemini-embedding-2-preview` for embeddings | 2026-03-22 |
 | 2 | Single `DESIGN.md` instead of multiple docs | Covers all Part B deliverables in one cohesive document; easier for evaluators | 2026-03-22 |
 | 3 | Keep Docling for PDF parsing | Explicitly required by the test; good multimodal extraction | 2026-03-22 |
-| 4 | Embedding dim 768 (Gemini default) | `text-embedding-004` default output; no need to customize | 2026-03-22 |
+| 4 | Embedding dim 768 (Gemini default) | `gemini-embedding-2-preview` default output; no need to customize | 2026-03-22 |

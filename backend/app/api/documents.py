@@ -204,3 +204,59 @@ async def delete_document(
     db.commit()
     
     return {"message": "Document deleted successfully"}
+
+
+@router.post("/{document_id}/reprocess")
+async def reprocess_document(
+    document_id: int,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_db)
+):
+    """
+    Re-process a document (regenerate embeddings with current model).
+    
+    Useful when switching embedding models — deletes old chunks and
+    re-runs the full processing pipeline.
+    """
+    document = db.query(Document).filter(Document.id == document_id).first()
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if not os.path.exists(document.file_path):
+        raise HTTPException(status_code=400, detail="Source file not found on disk")
+    
+    # Delete old chunks, images, and tables
+    from app.models.document import DocumentChunk, DocumentImage, DocumentTable
+    
+    # Delete files from disk first
+    for img in document.images:
+        if os.path.exists(img.file_path):
+            os.remove(img.file_path)
+    for tbl in document.tables:
+        if os.path.exists(tbl.image_path):
+            os.remove(tbl.image_path)
+            
+    db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
+    db.query(DocumentImage).filter(DocumentImage.document_id == document_id).delete()
+    db.query(DocumentTable).filter(DocumentTable.document_id == document_id).delete()
+    
+    # Reset counters
+    document.processing_status = "pending"
+    document.error_message = None
+    document.text_chunks_count = 0
+    document.images_count = 0
+    document.tables_count = 0
+    db.commit()
+    
+    # Trigger re-processing
+    background_tasks.add_task(
+        _process_document_background, document.id, document.file_path
+    )
+    
+    return {
+        "id": document.id,
+        "filename": document.filename,
+        "status": "pending",
+        "message": "Document re-processing triggered. Old chunks deleted, new embeddings will be generated."
+    }

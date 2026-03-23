@@ -1,206 +1,64 @@
-# Multimodal Document Chat System - Coding Test (AI Context Architect & Engineering Lead)
+# Multimodal Document Chat System
 
-## Project Overview
+![Project Status](https://img.shields.io/badge/Status-Complete-success)
+![Gemini](https://img.shields.io/badge/AI-Google_Gemini-blue)
+![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)
+![Next.js](https://img.shields.io/badge/Frontend-Next.js-black)
 
-**Focus**: Verify capability as an **AI Context Architect & Engineering Lead**.  
-**Goal**: Build a system that parses PDF documents (text/image/table), constructs a retrieval workflow, and provides accurate answers via a multimodal chat interface.
+## Overview
 
-> **Why this test?**  
-> We are looking for a leader who can design the "Context" for LLMs, not just write code. We want to see your ability to design robust **Multimodal Workflows** and demonstrate **Technical Leadership** through architectural decisions.
+This project is a fully functional **Multimodal Document Chat System**. It ingests PDF documents, parses them structurally (extracting text, images, and tables), embeds the content into a vector database, and allows users to converse with the document using an advanced RAG (Retrieval-Augmented Generation) pipeline.
 
----
+This repository fulfills the requirements for the **AI Context Architect & Engineering Lead** coding test.
 
-## Core Competencies to Evaluate
+## Project Deliverables
 
-1. **Context Engineering**: Ability to design data structures (Chunking, Embedding, Metadata) for optimal LLM understanding.
-2. **Multimodal Workflow**: Ability to orchestrate text, images, and tables into a single coherent workflow.
-3. **Technical Leadership**: Ability to diagnose bottlenecks, ensuring quality and performance.
+- **Implementation**: The core pipeline (`document_processor.py`), vector store integration (`vector_store.py`), and RAG orchestrator (`chat_engine.py`) have been fully implemented using Google Gemini's models (`gemini-2.5-flash` and `gemini-embedding-2-preview`). Document parsing is facilitated intelligently by `Docling`.
+- **Architectural & Design Choices**: Detailed in [`DESIGN.md`](./DESIGN.md). This covers strategies around structural chunking, spatial & semantic multimodal linking, dynamic evaluation pipelines, and scalable prompt versioning.
+- **Task Verification**: See [`TASK.md`](./TASK.md) for the completion checklist of all requirements tracking the steps from environment setup through API integrations.
+- **Original Instructions**: The original coding test requirements have been preserved in [`README_past.md`](./README_past.md).
 
----
+## Quickstart & Installation
 
-## Provided Components (Starting Point)
+### Prerequisites
+- Docker (20.10+) & Docker Compose
+- Node.js 18.0+
+- Python 3.11+
+- [Google Gemini API Key](https://aistudio.google.com/app/apikey)
 
-The following items are **already implemented and provided**:
-
-### Infrastructure Setup
-- Docker Compose configuration (PostgreSQL+pgvector, Redis, Backend, Frontend)
-- Database schema and models (SQLAlchemy)
-- API base structure (FastAPI)
-- Frontend base structure (Next.js + TailwindCSS)
-
-### Database Models
-- `Document` - Uploaded document information
-- `DocumentChunk` - Text chunks (with vector embeddings)
-- `DocumentImage` - Extracted images
-- `DocumentTable` - Extracted tables
-- `Conversation` - Chat sessions
-- `Message` - Chat messages
-
-### API Endpoints (Skeleton provided)
-- `POST /api/documents/upload` - Upload document
-- `GET /api/documents` - List documents
-- `GET /api/documents/{id}` - Document details
-- `DELETE /api/documents/{id}` - Delete document
-- `POST /api/chat` - Send chat message
-- `GET /api/conversations` - List conversations
-- `GET /api/conversations/{id}` - Get conversation history
-
-### Frontend Pages (Layout only)
-- `/` - Home (document list)
-- `/upload` - Document upload
-- `/chat` - Chat interface
-- `/documents/[id]` - Document details
-
----
-
-## Core Features to Implement (Your Job)
-
-Scale: **3 Core Features + 3 Design Deliverables**
-
-### Part A: System Implementation (Implementation)
-
-#### 1. Document Processing Pipeline (Critical)
-**Location**: `backend/app/services/document_processor.py`
-**Goal**: Parse PDF and structure data for Retrieval.
-
-```python
-class DocumentProcessor:
-    async def process_document(self, file_path: str, document_id: int) -> Dict[str, Any]:
-        """
-        Implementation steps:
-        1. Parse PDF using Docling
-        2. Extract and chunk text (Context Engineering)
-        3. Extract images/tables and create meaningful metadata linkage
-        """
-        pass
+### Configuration
+Clone the repository and define your environment variables. Check `.env.example` as a template for setting up the environment:
+```bash
+# Example setup for .env
+GEMINI_API_KEY="your-gemini-key"
+GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_EMBEDDING_MODEL="gemini-embedding-2-preview"
 ```
 
-#### 2. Vector Store Integration (Critical)
-**Location**: `backend/app/services/vector_store.py`
-**Goal**: Store projections of multimodal data.
-
-```python
-class VectorStore:
-    async def store_text_chunks(self, chunks: List[Dict[str, Any]], document_id: int) -> int:
-        pass
-    
-    async def search_similar(self, query: str, document_id: Optional[int] = None, k: int = 5) -> List[Dict[str, Any]]:
-        """
-        Retrieve context with high relevance. 
-        Think about how to retrieve 'Tables' or 'Images' associated with text chunks.
-        """
-        pass
+### Running the Application (Docker)
+The easiest way to bootstrap the application is via Docker Compose at the root of the project:
+```bash
+docker-compose up -d --build
 ```
+This spins up PostgreSQL with pgvector, Redis, the FastApi Backend, and the Next.js Frontend.
 
-#### 3. Multimodal Chat Engine (Critical)
-**Location**: `backend/app/services/chat_engine.py`
-**Goal**: Generate grounded answers using retrieved context.
+- **Frontend Application**: `http://localhost:3000`
+- **Backend API & Swagger**: `http://localhost:8000/docs`
 
-```python
-class ChatEngine:
-    async def process_message(self, conversation_id: int, message: str, document_id: Optional[int] = None) -> Dict[str, Any]:
-        """
-        Orchestrate the RAG flow:
-        1. Retrieve context (Text + Image + Table)
-        2. Construct Prompt (Prompt Engineering)
-        3. Generate Response via LLM
-        """
-        pass
-```
+## Usage Guide
+1. **Upload Documents**: Navigate to `http://localhost:3000/upload` and upload the test paper (e.g., `1706.03762.pdf` - Attention Is All You Need).
+2. **Background Processing**: The backend leverages `Docling` to extract structured sections, isolate images, render tables, and compute Gemini 768-dimension embeddings, which are written parallel to `pgvector`.
+3. **Conversational AI**: Navigate to the Chat interface to query against the processed material. The chat engine retrieves relevant text, maps adjacent images/tables based on document structure, and generates highly grounded answers.
+   - *Example 1 (Images)*: "Show me the Transformer architecture diagram."
+   - *Example 2 (Tables)*: "What are the BLEU scores listed for the base model?"
+   - *Example 3 (Concept)*: "Explain self-attention."
 
----
+## Built With
+- **Algorithms & Core Logic**: Custom structural chunking logic + "semantic halo" linking
+- **Backend Architecture**: FastAPI + SQLAlchemy + Data structures mapping
+- **AI & RAG**: Google Generative AI (Gemini Flash & Embeddings), pgvector for similarity searching
+- **Document Processing**: Docling
+- **Frontend Stack**: Next.js + TailwindCSS + React Hooks
 
-### Part B: Design & Leadership (New Requirements)
-
-In addition to code, please include the following in your `README.md` or separate markdown files (e.g., `DESIGN.md`).
-
-#### 1. [Design Choice Document]
-*   **Chunking Strategy**: Why did you choose this specific chunk size/overlap? Did you consider semantic chunking?
-*   **Multimodal Linking**: How did you logically link extracted images/tables to text? (e.g., spatial proximity, explicit references in text?)
-
-#### 2. [Evaluation Pipeline Design]
-*   **Quality Metrics**: How will you measure the accuracy of answers? (e.g., "If I were to build an eval pipeline, I would check X, Y, Z...")
-*   **Metrics**: Mention specific metrics like RAGAS (faithfulness, answer relevance) or LLM-as-a-judge approaches.
-
-#### 3. [Prompt Versioning Strategy]
-*   **Management**: Did you hardcode prompts? If you were to scale this, how would you manage prompt versions?
-*   **Proposal**: Suggest a strategy to separate prompts from code (e.g., external templates, prompt registry).
-
----
-
-## Evaluation Criteria (100 points)
-
-### 1. Code Quality & Leadership (25 points)
-- Design Patterns & Abstraction
-- Readability for Junior Devs
-- Error Handling & Resilience
-
-### 2. Feature Implementation (30 points)
-- Document Parsing (Docling)
-- Vector Search Accuracy
-- Multimodal RAG Flow
-
-### 3. Systems Design & Engineering (30 points)
-- **Context Engineering**: Logic behind chunking & metadata
-- **Evaluation**: Depth of thought on quality assurance
-- **Prompt Management**: Maturity of prompt handling
-
-### 4. UX/UX & Documentation (15 points)
-- `README` Quality (Design choices explanation)
-- UI/UX interaction flow
-- API Documentation
-
----
-
-## Submission Requirements
-
-1. **GitHub Repository**
-2. **Source Code**
-3. **Documentation** (README.md + DESIGN.md)
-4. **Screenshots & Results** (using `1706.03762v7.pdf`)
-
----
-
-## Sample PDF for Testing
-
-**📄 Test Document**: ["Attention Is All You Need" Paper](https://arxiv.org/pdf/1706.03762.pdf)
-
-Use this document to demonstrate:
-1. **Architecture Diagram Retrieval**: Can it find Figure 1?
-2. **Table Data Retrieval**: Can it answer questions about BLEU scores?
-3. **Technical Context**: Can it explain "Self-Attention" using specific sections?
-
----
-
-Good luck! We look forward to seeing your **Technical Leadership** and **Architectural Insight**.
-
----
-
-## Implementation Guidelines
-
-Refer to the service skeleton files for detailed implementation guidance:
-- `backend/app/services/document_processor.py`
-- `backend/app/services/vector_store.py`
-- `backend/app/services/chat_engine.py`
-
----
-
-## Free LLM Options (For Development)
-
-You can use **Ollama** (free, local) or **Gemini/Groq** (free tier) to implement this without cost.
-
----
-
-## FAQ
-
-**Q: Where is the test PDF?**
-A: `https://arxiv.org/pdf/1706.03762.pdf`
-
-**Q: Can I use LangChain/LlamaIndex?**
-A: Yes, but we value your ability to explain *how* it works under the hood.
-
----
-
-**Version**: 2.0 (Updated for AI Context Architect Role)
-**Last Updated**: 2026-01-12
-**Author**: InterOpera-Apps Hiring Team
+## Author
+**Rusdiy Afkar**

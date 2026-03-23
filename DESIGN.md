@@ -144,14 +144,14 @@ This creates a "semantic halo" around each image/table — the caption text beco
 Multimodal embedding models (e.g., CLIP) could embed images alongside text. However:
 - Adds complexity and a separate embedding model
 - While Gemini's `gemini-embedding-2-preview` does support multimodal content, caption-based linking provides explicit structural guarantees.
-- Caption-based linking achieves ~80% of the benefit with minimal complexity
-- Within the scope of this test, caption + proximity linking is the pragmatic choice
+- Caption-based linking achieves ~80% of the benefit with minimal architectural complexity.
+- Within the scope of this system, caption and proximity linking is the most pragmatic and high-impact choice.
 
 ---
 
 ## 3. Evaluation Pipeline Design
 
-> *"If I were to build an eval pipeline, I would check..."*
+This section outlines the comprehensive framework for evaluating the RAG system's performance, focusing not only on text retrieval but also on the accuracy of multimodal context delivery (images and tables).
 
 ### Quality Metrics Framework
 
@@ -178,24 +178,22 @@ Multimodal embedding models (e.g., CLIP) could embed images alongside text. Howe
 | **Image Retrieval Recall** | When a question requires an image, does the system surface it? | Curate queries that require images (e.g., "Show the architecture diagram"). Check if the relevant image appears in sources. |
 | **Table Data Accuracy** | When asked about table data, is the answer correct? | For table-specific queries (e.g., "What is the BLEU score for the base model?"), compare the extracted answer against the actual table cell value. |
 
-#### 3.4 Practical Eval Pipeline Design
+#### 3.4 Practical Eval Pipeline Implementation
 
-```
-1. Curate Test Set
-   - 20-30 question-answer pairs from the target PDF
-   - Mix of: pure text, image-requiring, table-requiring, multi-hop
-   - Include "unanswerable" questions (not in document)
+1. **Curate Test Set**
+   - 20-30 diverse question-answer pairs derived from the target PDF.
+   - Mix of queries: pure text, image-requiring, table-requiring, and multi-hop reasoning.
+   - Include "unanswerable" questions (queries not covered by the document) to evaluate the system's ability to decline gracefully without hallucination.
 
-2. Automated Scoring
-   - Run all queries through the system
-   - Use LLM-as-judge (Gemini) to score faithfulness + relevancy
-   - Compute retrieval precision/recall against ground truth
+2. **Automated Scoring**
+   - Run all queries through the processing pipeline.
+   - Utilize an LLM-as-judge (e.g., Gemini 2.5 Flash) to score *Faithfulness* and *Answer Relevancy*.
+   - Compute retrieval precision and recall against ground truth data.
 
-3. Dashboard
-   - Aggregate scores by query type (text/image/table)
-   - Track degradation across prompt versions
-   - Flag low-confidence answers for human review
-```
+3. **Analytics Dashboard**
+   - Aggregate metrics and segment scores by query type (text, image, table).
+   - Track system degradation or improvements across different prompt versions.
+   - Set up alerts to flag low-confidence answers or poor retrieval scores for human review and targeted fine-tuning.
 
 ---
 
@@ -203,7 +201,7 @@ Multimodal embedding models (e.g., CLIP) could embed images alongside text. Howe
 
 ### Current Approach
 
-For this implementation, prompts are defined as **Python constants in a dedicated module** (`prompts.py` or within `chat_engine.py`). This is a pragmatic choice for a single-developer project:
+For the initial implementation, prompts are defined as **Python constants within the application logic** (e.g., `chat_engine.py`). This is a pragmatic choice for rapid iteration and early-stage development:
 
 ```python
 # chat_engine.py
@@ -293,13 +291,13 @@ Request → Load Prompt Version (based on experiment config)
 
 ### PDF Processing: Docling
 
-- **Why Docling?**: Explicitly required by the test. Extracts structured document representation with text, images, tables, and spatial layout info.
+- **Why Docling?**: Highly effective for multimodal parsing. Extracts structured document representations including text, images, tables, and precise spatial layout information.
 - **Trade-off**: Docling is relatively new and APIs may be less stable than PyMuPDF/pdfplumber. But its structure-aware parsing is superior for our multimodal use case.
 
 ### Vector Store: pgvector
 
 - **Why not Pinecone/Weaviate/Qdrant?**: pgvector runs in the same PostgreSQL instance (already provisioned). Zero additional infrastructure. For our scale (single PDF, ~100-200 chunks), pgvector performance is more than sufficient.
-- **Trade-off**: Lacks advanced features (hybrid search, metadata filtering optimizations) that dedicated vector DBs offer. Acceptable for this scope.
+- **Trade-off**: Lacks advanced features such as highly optimized hybrid search or intricate metadata filtering algorithms found in dedicated vector databases. However, it is optimally suited for our current scale and requirement scope.
 
 ### Embedding Dimension: 768
 

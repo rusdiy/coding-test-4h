@@ -66,10 +66,10 @@
 - [x] Capture screenshots for submission
 
 ## Phase 7: Documentation (DESIGN.md)
-- [ ] Finalize Design Choice Document (chunking + multimodal linking)
-- [ ] Finalize Evaluation Pipeline Design
-- [ ] Finalize Prompt Versioning Strategy
-- [ ] Review and polish DESIGN.md for submission quality
+- [x] Finalize Design Choice Document (chunking + multimodal linking)
+- [x] Finalize Evaluation Pipeline Design
+- [x] Finalize Prompt Versioning Strategy
+- [x] Review and polish DESIGN.md for submission quality
 
 ---
 

@@ -26,10 +26,6 @@ out/
 
 # Uploads
 uploads/
-*.pdf
-*.png
-*.jpg
-*.jpeg
 
 # Database
 *.db

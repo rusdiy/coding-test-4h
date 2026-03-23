@@ -50,8 +50,11 @@ This spins up PostgreSQL with pgvector, Redis, the FastApi Backend, and the Next
 2. **Background Processing**: The backend leverages `Docling` to extract structured sections, isolate images, render tables, and compute Gemini 768-dimension embeddings, which are written parallel to `pgvector`.
 3. **Conversational AI**: Navigate to the Chat interface to query against the processed material. The chat engine retrieves relevant text, maps adjacent images/tables based on document structure, and generates highly grounded answers.
    - *Example 1 (Images)*: "Show me the Transformer architecture diagram."
+     <br><img src="screenshots/01_architecture_diagram_retrieval.png" width="800"/>
    - *Example 2 (Tables)*: "What are the BLEU scores listed for the base model?"
+     <br><img src="screenshots/02_table_data_retrieval.png" width="800"/>
    - *Example 3 (Concept)*: "Explain self-attention."
+     <br><img src="screenshots/03_technical_context_retrieval.png" width="800"/>
 
 ## Built With
 - **Algorithms & Core Logic**: Custom structural chunking logic + "semantic halo" linking
